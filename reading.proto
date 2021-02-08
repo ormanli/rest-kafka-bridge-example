@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message TemperatureReading {
+  google.protobuf.Timestamp timestamp = 1;
+  string machine_id = 3;
+  double temperature = 4;
+}
