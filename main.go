@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	stdHttp "net/http"
 	"os"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-http/pkg/http"
@@ -18,7 +17,6 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/golang/protobuf/proto"
 	"github.com/kelseyhightower/envconfig"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Config struct {
@@ -26,12 +24,6 @@ type Config struct {
 	ServerPort int    `required:"true" split_words:"true"`
 	KafkaHost  string `required:"true" split_words:"true"`
 	KafkaPort  int    `required:"true" split_words:"true"`
-}
-
-type Reading struct {
-	Timestamp   time.Time `json:"timestamp"`
-	MachineID   string    `json:"machine_id"`
-	Temperature float64   `json:"temperature"`
 }
 
 func main() {
@@ -96,24 +88,18 @@ func main() {
 		"readings",
 		kafkaPublisher,
 		func(msg *message.Message) ([]*message.Message, error) {
-			r := Reading{}
+			var tr TemperatureReading
 
-			if err := json.Unmarshal(msg.Payload, &r); err != nil {
+			if err := json.Unmarshal(msg.Payload, &tr); err != nil {
 				return nil, fmt.Errorf("can't unmarshal json message: %w", err)
 			}
 
-			if r.MachineID == "" {
-				return nil, errors.New("empty device id")
+			if tr.MachineId == "" {
+				return nil, errors.New("empty machine id")
 			}
 
-			if r.Timestamp.IsZero() {
+			if !tr.Timestamp.IsValid() {
 				return nil, errors.New("empty timestamp")
-			}
-
-			tr := TemperatureReading{
-				Timestamp:   timestamppb.New(r.Timestamp),
-				MachineId:   r.MachineID,
-				Temperature: r.Temperature,
 			}
 
 			b, err := proto.Marshal(&tr)
